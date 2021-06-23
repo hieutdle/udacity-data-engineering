@@ -26,6 +26,21 @@ def upload_etl(s3_client, file_name, bucket_name):
     s3_client.upload_file(file_name, bucket_name, 'etl.py')
 
 
+def upload_files(s3_client, bucket_name):
+    """Upload all data files to S3.
+    Args:
+        s3_client: S3 Client
+        bucket_name: Name of the bucket
+    Returns:
+        None
+    """
+    s3_client.upload_file('i94_apr16_sub.sas7bdat', bucket_name, 'i94_apr16_sub.sas7bdat')
+    s3_client.upload_file('GlobalLandTemperaturesByCity.csv', bucket_name, 'temperatures_data/GlobalLandTemperaturesByCity.csv')
+    s3_client.upload_file('us-cities-demographics.csv', bucket_name, 'demographics_data/us-cities-demographics.csv')
+    s3_client.upload_file('airport-codes_csv.csv', bucket_name, 'airports_data/airport-codes_csv.csv')
+   
+
+
 def create_emr_cluster(emr_client, config):
     """Creates a EMR Cluster AWS S3.
     Args:
@@ -81,7 +96,7 @@ def create_emr_cluster(emr_client, config):
                     'Market': 'ON_DEMAND',
                     'InstanceRole': 'CORE',
                     'InstanceType': 'm5.xlarge',
-                    'InstanceCount': 4,
+                    'InstanceCount': 5,
                 }
             ],
             'KeepJobFlowAliveWhenNoSteps': False,
@@ -136,12 +151,12 @@ def create_iam_role(iam_client):
     )
 
     iam_client.attach_role_policy(
-        RoleName='MyEmrRole',
+        RoleName='HieuLeEmrRole',
         PolicyArn='arn:aws:iam::aws:policy/AmazonS3FullAccess'
     )
 
     iam_client.attach_role_policy(
-        RoleName='MyEmrRole',
+        RoleName='HieuLeEmrRole',
         PolicyArn='arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceRole'
     )
 
@@ -159,8 +174,8 @@ def main():
 
     config.read('dl.cfg')
 
-    iam_client = boto3.client('iam')
-    create_iam_role(iam_client)
+    # iam_client = boto3.client('iam')
+    # create_iam_role(iam_client)
     
     s3_client = boto3.client(
         's3',
@@ -173,8 +188,13 @@ def main():
     
     # create_bucket(s3_client, config['BUCKET']['CODE_BUCKET'])
 
+    # create_bucket(s3_client, config['BUCKET']['INPUT_BUCKET'])
+
+    # upload_files(s3_client,config['BUCKET']['INPUT_BUCKET'])
+
     upload_etl(s3_client, 'etl.py', config['BUCKET']['CODE_BUCKET'])
 
+    
     emr_client = boto3.client(
             'emr',
             region_name='us-west-2',
@@ -183,7 +203,7 @@ def main():
         )
     
     create_emr_cluster(emr_client, config)
-
+    
 
 if __name__ == '__main__':
     main()
