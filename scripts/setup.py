@@ -23,8 +23,7 @@ def upload_etl(s3_client, file_name, bucket_name):
     Returns:
         None
     """
-    s3_client.upload_file(file_name, bucket_name, 'etl.py')
-
+    s3_client.upload_file(file_name, bucket_name, file_name)
 
 def upload_files(s3_client, bucket_name):
     """Upload all data files to S3.
@@ -34,11 +33,13 @@ def upload_files(s3_client, bucket_name):
     Returns:
         None
     """
-    s3_client.upload_file('i94_apr16_sub.sas7bdat', bucket_name, 'i94_apr16_sub.sas7bdat')
-    s3_client.upload_file('GlobalLandTemperaturesByCity.csv', bucket_name, 'temperatures_data/GlobalLandTemperaturesByCity.csv')
-    s3_client.upload_file('us-cities-demographics.csv', bucket_name, 'demographics_data/us-cities-demographics.csv')
-    s3_client.upload_file('airport-codes_csv.csv', bucket_name, 'airports_data/airport-codes_csv.csv')
-   
+    # s3_client.upload_file('i94_apr16_sub.sas7bdat', bucket_name, 'i94_apr16_sub.sas7bdat')
+    # s3_client.upload_file('GlobalLandTemperaturesByCity.csv', bucket_name, 'temperatures_data/GlobalLandTemperaturesByCity.csv')
+    # s3_client.upload_file('us-cities-demographics.json', bucket_name, 'demographics_data/us-cities-demographics.json')
+    # s3_client.upload_file('airport-codes_csv.csv', bucket_name, 'airports_data/airport-codes_csv.csv')
+    # s3_client.upload_file('us-cities-demographics.csv', bucket_name, 'demographics_data/us-cities-demographics.csv')
+    # s3_client.upload_file('temtest.csv', bucket_name, 'tests_data/temtest.csv')
+
 
 
 def create_emr_cluster(emr_client, config):
@@ -51,7 +52,7 @@ def create_emr_cluster(emr_client, config):
     """
     cluster_id = emr_client.run_job_flow(
         Name='hieu-spark-cluster',
-        ReleaseLabel='emr-5.33.0',
+        ReleaseLabel='emr-6.1.0',
         LogUri='s3://aws-logs-594695117986-us-west-2/elasticmapreduce/',
         Applications=[
             {
@@ -61,10 +62,7 @@ def create_emr_cluster(emr_client, config):
                 'Name': 'Zeppelin'
             },
             {
-                'Name': 'JupyterHub'
-            },
-            {
-                'Name': 'JupyterEnterpriseGateway'
+                'Name': 'Hadoop'
             },
         ],
         Configurations=[
@@ -74,7 +72,7 @@ def create_emr_cluster(emr_client, config):
                     {
                         "Classification": "export",
                         "Properties": {
-                            "PYSPARK_PYTHON": "/usr/bin/python3"
+                            "PYSPARK_PYTHON": "/usr/bin/python3", "JAVA_HOME": "/etc/alternatives/jre"
                         }
                     }
                 ]
@@ -96,7 +94,7 @@ def create_emr_cluster(emr_client, config):
                     'Market': 'ON_DEMAND',
                     'InstanceRole': 'CORE',
                     'InstanceType': 'm5.xlarge',
-                    'InstanceCount': 5,
+                    'InstanceCount': 4,
                 }
             ],
             'KeepJobFlowAliveWhenNoSteps': False,
@@ -125,7 +123,7 @@ def create_emr_cluster(emr_client, config):
                 'ActionOnFailure': 'CANCEL_AND_WAIT',
                 'HadoopJarStep': {
                     'Jar': 'command-runner.jar',
-                    'Args': ['spark-submit', '/home/hadoop/etl.py',
+                    'Args': ['spark-submit','/home/hadoop/etl.py',
                              config['S3']['INPUT_DATA'], config['S3']['OUTPUT_DATA']]
                 }
             }
@@ -172,7 +170,7 @@ def main():
     """
     config = configparser.ConfigParser()
 
-    config.read('dl.cfg')
+    config.read('../dl.cfg')
 
     # iam_client = boto3.client('iam')
     # create_iam_role(iam_client)
@@ -190,10 +188,13 @@ def main():
 
     # create_bucket(s3_client, config['BUCKET']['INPUT_BUCKET'])
 
+    # create_bucket(s3_client, config['BUCKET']['JAR_BUCKET'])
+
     # upload_files(s3_client,config['BUCKET']['INPUT_BUCKET'])
 
-    upload_etl(s3_client, 'etl.py', config['BUCKET']['CODE_BUCKET'])
+    # upload_etl(s3_client, 'spark-sas7bdat-3.0.0-s_2.12.jar', config['BUCKET']['JAR_BUCKET'])
 
+    upload_etl(s3_client, 'etl.py', config['BUCKET']['CODE_BUCKET'])
     
     emr_client = boto3.client(
             'emr',
@@ -207,3 +208,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
