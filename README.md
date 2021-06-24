@@ -8,11 +8,7 @@ This is a capstone project for the Udacity DataEngineering Nanodegree. The purpo
 
 ### 1.2. Goal
 
-The objective of this project was to create an ETL pipeline to form an datalake about Temperature affections in the US. The analytics database could be used to find the answers for some examples questions:
-* How does temperature affect demographics of a city in the US?
-* How does temperature affect airport type of a city in the US (small,big)
-* Do Asians prefer hot or cold climates?
-* Do Asians prefer to live in cities which have big airport ?
+The objective of this project was to create an ETL pipeline to form an datalake about Temperature affections in the US. The analytics database could be used to find the correlation between temperature, demographics and airport type.
 ...
 
 ### 1.3. Datasets
@@ -42,18 +38,47 @@ For our ETL process we are using Apache Spark running on an EMR cluster on AWS. 
 ### Fact table
 
 1. temperatures fact table
-* date, month, year, avg_temp, avg_temp_uncertainty, city, latitude, longitude
+* temperature_id: unique id of a part of a tempearature record; Primary Key, auto-incremented
+* date: datetime, date of record, foreign key
+* month: int, month of record
+* year: int, year of record
+* avg_temp: string, average temperature
+* avg_temp_uncertainty: string, average temperature
+* city: name of the city
+* latitude: string, latitude
+* longitude: string, longitude
+* airport_code: airport_code, foreign key
+* city_id: int, city unique id, foreign key
 
 ### Dimension tables
 
-1. demographics dimesion table
-* city, state_name, median_age, male_population, female_population, total_population, num_veterans, foreign_born, avg_household, state_code, race
+1. city demographics dimesion table: A demographic of a city
+* city_id: unique id of a part of demographics in a city; Primary Key, auto-incremented
+* city : string, name of the city
+* state_name: string, state_code
+* median_age : float, median age
+* male_population: int, male population
+* female_population: int, female population
+* total_population: int, total population
+* num_veterans: int, number of vererans
+* foreign_born: int, number of foreign born
+* avg_household: float, average household size
+* state_code: string, 2-letter code of the state
 
-2. airports dimension table
-* city, airport_code, state_code , type, name
+2. airports: airport dimension table which store the information about airport
+* airport_code: string, 4-character unique airport code, Primary Key
+* city_name: string, name of the city where the airport is
+* state_code: string, 2-letter code of the state
+* type: string, type of airport (helicop,small, medium, large, ...)
+* name:  string, name of the airport
 
-3. time dimesion table
-* date, month, year, day, week, weekday 
+3. time dimesion table: timestamps of records in temperatures broken down into specific units
+* date : datetime, shows time when record temperature, Primary Key
+* month : int, month
+* year: int, year
+* day: int, day
+* week int, week
+* weekday: int, day of week
 
 # 3. Project structure
 
@@ -101,4 +126,8 @@ python setup.py
     - We can load Parquet files into Amazon Redshift as data warehouse. We can increase Redshift nodes depending on data size and access rate.
     - we can also try using Amazon Athena. Amazon Athena is an interactive query service that makes it easy to analyze data directly in Amazon Simple Storage Service (Amazon S3) using standard SQL
 
+
+# 6. Example of how  a user will do the query from the given schema.
+
+They can query the demographics of a city which has the lowest average temperature through the city_id.
 

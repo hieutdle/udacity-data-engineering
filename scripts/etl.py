@@ -35,8 +35,8 @@ def process_temperatures_data(spark, input_data, output_data):
         None
     """
     # get filepath to temperatures data file
-    temperatures_data = os.path.join(input_data, 'temperatures_data/*.csv')
-    # temperatures_data = os.path.join(input_data, 'tests_data/*.csv')
+    # temperatures_data = os.path.join(input_data, 'temperatures_data/*.csv')
+    temperatures_data = os.path.join(input_data, 'tests_data/*.csv')
 
     # read temperatures data file
     temperatures_df = spark.read.csv(temperatures_data,header=True)
@@ -64,17 +64,25 @@ def process_temperatures_data(spark, input_data, output_data):
     # write dimesion time table to parquet files partitioned by year and month
     time_table.write.partitionBy('year', 'month').parquet(os.path.join(output_data, 'time'),'overwrite')
 
+    demographics_df = spark.read.parquet(os.path.join(output_data, 'demographics/*.parquet'))
+    joined_df = temperatures_df.join(demographics_df, (temperatures_df.City == demographics_df.city_name), how='inner')
+
+    airports_df = spark.read.parquet(os.path.join(output_data, 'airports/state_code=*/*.parquet'))
+    joined_2_df = joined_df.join(airports_df,(joined_df.City == airports_df.city_name), how='left')
+
     # create temperature fact table
-    temperatures_table = temperatures_df.select(
+    temperatures_table = joined_2_df.select(
+        monotonically_increasing_id().alias('temperature_id'),
         col('dt').alias('date'),
         month('dt').alias('month'),
         year('dt').alias('year'),
         col('AverageTemperature').alias('avg_temp'),
         col('AverageTemperatureUncertainty').alias('avg_temp_uncertainty'),
         col('City').alias('city'),
-        col('Country').alias('country'),
         col('Latitude').alias('latitude'),
-        col('Longitude').alias('longitude')
+        col('Longitude').alias('longitude'),
+        'airport_code',
+        'city_id'
     )
 
     # write temperatures fact table to parquet files partitioned by year and month
@@ -99,11 +107,12 @@ def process_demographics_data(spark, input_data, output_data):
     demographics_df = demographics_df.dropna(subset=['Total Population'])
 
     # drop duplicate columns
-    demographics_df = demographics_df.drop_duplicates(subset=['City', 'State', 'Race'])
+    demographics_df = demographics_df.drop_duplicates(subset=['City', 'State'])
 
     # create demographics dimension table
     demographics_table = demographics_df.select(
-        col('City').alias('city'),
+        monotonically_increasing_id().alias('city_id'),
+        col('City').alias('city_name'),
         col('State').alias('state_name'),
         col('Median Age').alias('median_age'),
         col('Male Population').alias('male_population'),
@@ -112,12 +121,10 @@ def process_demographics_data(spark, input_data, output_data):
         col('Number of Veterans').alias('num_veterans'),
         col('Foreign-born').alias('foreign_born'),
         col('Average Household Size').alias('avg_household'),
-        col('State Code').alias('state_code'),
-        col('Race').alias('race'),
+        col('State Code').alias('state_code')
     )
-    
     # write dimesion demographics table to parquet files
-    demographics_table.write.partitionBy('state_code').parquet(os.path.join(output_data, 'demographics'),'overwrite')
+    demographics_table.write.parquet(os.path.join(output_data, 'demographics'),'overwrite')
 
 
 def process_airports_data(spark, input_data, output_data):
@@ -149,7 +156,7 @@ def process_airports_data(spark, input_data, output_data):
         'state_code',
         'type',
         'name',
-        col('municipality').alias('city')
+        col('municipality').alias('city_name')
     )
 
     # write aiports table to parquet files
@@ -161,7 +168,7 @@ def check_data_quality(spark, output_data):
     if airports_check_df.count() == 0:
         raise AssertionError('Processing airports data failed.')
 
-    demographics_check_df = spark.read.parquet(os.path.join(output_data, 'demographics/state_code=*/*.parquet'))
+    demographics_check_df = spark.read.parquet(os.path.join(output_data, 'demographics/*.parquet'))
 
     if demographics_check_df.count() == 0:
         raise AssertionError('Processing demographics data failed.')
@@ -194,9 +201,10 @@ def main():
 
     spark = create_spark_session()
 
-    process_temperatures_data(spark, input_data, output_data)
     process_demographics_data(spark, input_data, output_data)
     process_airports_data(spark, input_data, output_data)
+    process_temperatures_data(spark, input_data, output_data)
+    
     check_data_quality(spark,output_data)
 
 if __name__ == "__main__":

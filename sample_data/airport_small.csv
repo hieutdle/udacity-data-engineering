@@ -1,0 +1,7 @@
+ident,type,name,elevation_ft,continent,iso_country,iso_region,municipality,gps_code,iata_code,local_code,coordinates
+00A,heliport,Total Rf Heliport,11,NA,US,US-PA,Bensalem,00A,,00A,"-74.93360137939453, 40.07080078125"
+00AA,small_airport,Aero B Ranch Airport,3435,NA,US,US-KS,Leoti,00AA,,00AA,"-101.473911, 38.704022"
+00AK,small_airport,Lowell Field,450,NA,US,US-AK,Anchor Point,00AK,,00AK,"-151.695999146, 59.94919968"
+00AL,small_airport,Epps Airpark,820,NA,US,US-AL,Harvest,00AL,,00AL,"-86.77030181884766, 34.86479949951172"
+6N5,heliport,East 34th Street Heliport,10,NA,US,US-NY,New York,6N5,TSS,6N5,"-73.97209930419922, 40.74259948730469"
+6N6,seaplane_base,Evers Seaplane Base,,NA,US,US-NY,New York,6N6,,6N6,"-73.81620025634766, 40.84590148925781"
