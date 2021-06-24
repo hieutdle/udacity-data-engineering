@@ -35,8 +35,8 @@ def process_temperatures_data(spark, input_data, output_data):
         None
     """
     # get filepath to temperatures data file
-    # temperatures_data = os.path.join(input_data, 'temperatures_data/*.csv')
-    temperatures_data = os.path.join(input_data, 'tests_data/*.csv')
+    temperatures_data = os.path.join(input_data, 'temperatures_data/*.csv')
+    # temperatures_data = os.path.join(input_data, 'tests_data/*.csv')
 
     # read temperatures data file
     temperatures_df = spark.read.csv(temperatures_data,header=True)
