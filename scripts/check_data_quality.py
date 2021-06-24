@@ -33,7 +33,7 @@ def check_airports_data(spark, output_data):
 
 def check_demographics_data(spark, output_data):
 
-    demographics_check_df = spark.read.parquet(os.path.join(output_data, 'demographics/state_code=*/*.parquet'))
+    demographics_check_df = spark.read.parquet(os.path.join(output_data, 'demographics/*.parquet'))
 
     if demographics_check_df.count() == 0:
         raise AssertionError('Processing demographics data failed.')

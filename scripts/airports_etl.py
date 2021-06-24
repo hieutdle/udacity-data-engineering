@@ -53,7 +53,7 @@ def process_airports_data(spark, input_data, output_data):
         'state_code',
         'type',
         'name',
-        col('municipality').alias('city')
+        col('municipality').alias('city_name')
     )
 
     # write aiports table to parquet files

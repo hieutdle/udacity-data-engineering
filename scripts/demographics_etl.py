@@ -43,11 +43,12 @@ def process_demographics_data(spark, input_data, output_data):
     demographics_df = demographics_df.dropna(subset=['Total Population'])
 
     # drop duplicate columns
-    demographics_df = demographics_df.drop_duplicates(subset=['City', 'State', 'Race'])
+    demographics_df = demographics_df.drop_duplicates(subset=['City', 'State'])
 
     # create demographics dimension table
     demographics_table = demographics_df.select(
-        col('City').alias('city'),
+        monotonically_increasing_id().alias('city_id'),
+        col('City').alias('city_name'),
         col('State').alias('state_name'),
         col('Median Age').alias('median_age'),
         col('Male Population').alias('male_population'),
@@ -56,12 +57,10 @@ def process_demographics_data(spark, input_data, output_data):
         col('Number of Veterans').alias('num_veterans'),
         col('Foreign-born').alias('foreign_born'),
         col('Average Household Size').alias('avg_household'),
-        col('State Code').alias('state_code'),
-        col('Race').alias('race'),
+        col('State Code').alias('state_code')
     )
-    
     # write dimesion demographics table to parquet files
-    demographics_table.write.partitionBy('state_code').parquet(os.path.join(output_data, 'demographics'),'overwrite')
+    demographics_table.write.parquet(os.path.join(output_data, 'demographics'),'overwrite')
 
 def main():
     """Main Script run in AWS cluster

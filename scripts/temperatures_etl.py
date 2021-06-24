@@ -35,8 +35,8 @@ def process_temperatures_data(spark, input_data, output_data):
         None
     """
     # get filepath to temperatures data file
-    temperatures_data = os.path.join(input_data, 'temperatures_data/*.csv')
-
+    # temperatures_data = os.path.join(input_data, 'temperatures_data/*.csv')
+    temperatures_data = os.path.join(input_data, 'tests_data/*.csv')
 
     # read temperatures data file
     temperatures_df = spark.read.csv(temperatures_data,header=True)
@@ -64,17 +64,25 @@ def process_temperatures_data(spark, input_data, output_data):
     # write dimesion time table to parquet files partitioned by year and month
     time_table.write.partitionBy('year', 'month').parquet(os.path.join(output_data, 'time'),'overwrite')
 
+    demographics_df = spark.read.parquet(os.path.join(output_data, 'demographics/*.parquet'))
+    joined_df = temperatures_df.join(demographics_df, (temperatures_df.City == demographics_df.city_name), how='inner')
+
+    airports_df = spark.read.parquet(os.path.join(output_data, 'airports/state_code=*/*.parquet'))
+    joined_2_df = joined_df.join(airports_df,(joined_df.City == airports_df.city_name), how='left')
+
     # create temperature fact table
-    temperatures_table = temperatures_df.select(
+    temperatures_table = joined_2_df.select(
+        monotonically_increasing_id().alias('temperature_id'),
         col('dt').alias('date'),
         month('dt').alias('month'),
         year('dt').alias('year'),
         col('AverageTemperature').alias('avg_temp'),
         col('AverageTemperatureUncertainty').alias('avg_temp_uncertainty'),
         col('City').alias('city'),
-        col('Country').alias('country'),
         col('Latitude').alias('latitude'),
-        col('Longitude').alias('longitude')
+        col('Longitude').alias('longitude'),
+        'airport_code',
+        'city_id'
     )
 
     # write temperatures fact table to parquet files partitioned by year and month
