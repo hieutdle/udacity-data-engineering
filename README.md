@@ -35,34 +35,76 @@ For our ETL process we are using Apache Spark running on an EMR cluster on AWS. 
 
 # 2. Data Model
 
+Data Lake
+This is what we are using for analytics. The data is prepared to allow for fast query times.
+We are consturcting a star schema with 1 fact table and multiple dimension tables.
+
+Fact table: temperatures table.
+* Decided by business use-case (analyze the average temperature through year of a city)
+* Holds records of a metric(city,average temperature,...)
+* Changes regularly. Update every day according to the data source.
+* Connects to dimensions via foreign keys(via aiport_code code and city_id)
+
+Dimesion table: city demographics table, airport table, time table
+* Holds descriptions of attributes:
+    * For the city table, it hold the demographics of a city
+    * For the airport table, it hold the description of a airport
+    * For the time table, it hold the description of a time
+* These table are not change often (the demographics and the description of the airport are just provided at specify time according to the data source, do not have date attribute )
+
+I choose the Star schema because is in a more de-normalized form and hence tends to be better for performce analysis. It uses less foreign key. The relationships inside the data are simple and don’t have many to many relationships .
+
+The  temperatures fact table is the heart of the data model. This table's data comes from the temperatures data sets and contains keys that links to the dimension tables. The data dictionary of the temperatures dataset contains detailed information on the data that makes up the fact table.
+
+The us city dimension table comes from the demographics dataset and links to the temperatures fact table at by city_id. This dimension would allow analysts to get insights from temperatures patterns into the US city demographics based on cities for example: overall population of a cities based on temperature. We could ask questions such as, do low temperatures have small population?. 
+
+Example:
+
+I find the average temperature in 2/2010 of Minneapolis its -9, its pretty low so i want to find its population and median age for further analysis.
+
+The airport dimension table comes from airport dataset and link to the temperatures fact table by airport_code. This dimesion would allow analyst to get insights like does temperatures affect airport types?
+
+Example: 
+
+Now i have a average temperature of a specific time at the year (it can be very low), its population. So I want to find if there are any heliport in this city for further analysis like do low temperature and low population make it have less type of airports. ( low temperature make it harder for operate airport and low population make it less airport and also airport type )
+
+**Cleaning data:**
+I filter all data:
+* drop duplicates in all table
+* just about the city in the usa so that we can analysis about it.
+
+The main idea is analyze about the temperature and also can check the demographic of the city and the airport type of the same city in the US when the analyst need it.
+
+# 3. Data Dictionary
+
 ### Fact table
 
 1. temperatures fact table
-* temperature_id: unique id of a part of a tempearature record; Primary Key, auto-incremented
-* date: datetime, date of record, foreign key
-* month: int, month of record
-* year: int, year of record
-* avg_temp: string, average temperature
-* avg_temp_uncertainty: string, average temperature
-* city: name of the city
-* latitude: string, latitude
-* longitude: string, longitude
-* airport_code: airport_code, foreign key
-* city_id: int, city unique id, foreign key
+* temperature_id: int；unique id of a part of a tempearature record; Primary Key, auto-incremented
+* date: datetime, shows the date when the the temperature was recorded, foreign key
+* month: int, month of the record
+* year: int, year of the record 
+* avg_temp: float, Average temperature: show the average temperature of the city corresponding to the date. 
+* avg_temp_uncertainty: float,  Average temperature uncertainty: you don't know for certain that the temperature was exactly {number}, so the avg_temp_uncertainty measure the fluctuations range.
+* city: string, name of the city where recorded the temperature 
+* latitude: string, latitude of the record
+* longitude: string, longitude of the record
+* airport_code: string, airport_code, foreign key, using for connect to the airport table
+* city_id: int, city unique id, foreign key, using for connect to the demographic table
 
 ### Dimension tables
 
-1. city demographics dimesion table: A demographic of a city
-* city_id: unique id of a part of demographics in a city; Primary Key, auto-incremented
+1. city demographics dimesion table: A demographic of a city, where we can get a data about demographic.
+* city_id: int, unique id of a city; Primary Key, auto-incremented
 * city : string, name of the city
-* state_name: string, state_code
-* median_age : float, median age
-* male_population: int, male population
-* female_population: int, female population
-* total_population: int, total population
-* num_veterans: int, number of vererans
-* foreign_born: int, number of foreign born
-* avg_household: float, average household size
+* state_name: string, Name of the state where the city is
+* median_age : float, median age of people in the city
+* male_population: int, male population of the city
+* female_population: int, female population of the city
+* total_population: int, total populationn of the city
+* num_veterans: int, number of vererans in the city
+* foreign_born: int, number of foreign-born in the city
+* avg_household: float, average household size, average number of people in a family
 * state_code: string, 2-letter code of the state
 
 2. airports: airport dimension table which store the information about airport
@@ -74,11 +116,11 @@ For our ETL process we are using Apache Spark running on an EMR cluster on AWS. 
 
 3. time dimesion table: timestamps of records in temperatures broken down into specific units
 * date : datetime, shows time when record temperature, Primary Key
-* month : int, month
-* year: int, year
-* day: int, day
-* week int, week
-* weekday: int, day of week
+* month : int, month of the record
+* year: int, year of the cord
+* day: int, day of the record in a month
+* week int, week of the record in a month
+* weekday: int, day of the record in a week
 
 # 3. Project structure
 
@@ -87,7 +129,7 @@ udacity-data-engineering
 │   README.md                            # Project description  
 │   requirements.txt                     # Python dependencies
 │   dl.cfg                               # Config file
-|
+|   test_parquet.ipynb                   # Check parquet files
 └───script                               # Python Scripts folder
 |   | demographicss_etl.py               # Demographics data ETL
 |   | airports_etl.py                    # Airports data ETL   
@@ -100,11 +142,6 @@ udacity-data-engineering
 |   | airport-codes_csv.csv              # Airports sample data
 |   | temperatures_sample.csv            # Temperatures sample data
 |   | us-cities-demographics.json        # Demographics sample_data   
-|  
-└───extra                                # Extra folder for test and new features in future
-|   | spark-sas7bdat-3.0.0-s_2.12.jar    # Jar file for read sas7bdat files in the future
-|   | test.ipynb                         # test notebook
-|   | test.py                            # ETL for sas7bdat files in the future    
 ```
 
 # 4. Running steps
@@ -125,9 +162,4 @@ python setup.py
 3. The database needed to be accessed by 100+ people.
     - We can load Parquet files into Amazon Redshift as data warehouse. We can increase Redshift nodes depending on data size and access rate.
     - we can also try using Amazon Athena. Amazon Athena is an interactive query service that makes it easy to analyze data directly in Amazon Simple Storage Service (Amazon S3) using standard SQL
-
-
-# 6. Example of how  a user will do the query from the given schema.
-
-They can query the demographics of a city which has the lowest average temperature through the city_id.
 
